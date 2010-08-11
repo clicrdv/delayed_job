@@ -170,11 +170,16 @@ module Delayed
       # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
       # this leads to a more even distribution of jobs across the worker processes
       job = Delayed::Job.find_available(name, 5, self.class.max_run_time).detect do |job|
-        if job.lock_exclusively!(self.class.max_run_time, name)
-          say "acquired lock on #{job.name}"
-          true
-        else
-          say "failed to acquire exclusive lock for #{job.name}", Logger::WARN
+        begin
+          if job.lock_exclusively!(self.class.max_run_time, name)
+            say "* [Worker(#{name})] acquired lock on #{job.name}"
+            true
+          else
+            say "* [Worker(#{name})] failed to acquire exclusive lock for #{job.name}", Logger::WARN
+            false
+          end
+        rescue Delayed::Backend::DeserializationError => e
+          job.update_attributes(:attempts => 3, :failed_at => DateTime.now, :last_error => e.message)
           false
         end
       end
