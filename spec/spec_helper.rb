@@ -14,7 +14,7 @@ RAILS_ENV = 'test'
 
 # determine the available backends
 BACKENDS = []
-Dir.glob("#{File.dirname(__FILE__)}/setup/*.rb") do |backend|
+Dir.glob("#{File.dirname(__FILE__)}/setup/active_record.rb") do |backend|
   begin
     backend = File.basename(backend, '.rb')
     require "setup/#{backend}"

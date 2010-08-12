@@ -23,3 +23,7 @@ module M
     def perform; @@runs += 1; end    
   end
 end
+
+class YAMLErrorJob < Struct.new(:prop)
+  def perform; end
+end
