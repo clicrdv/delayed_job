@@ -208,6 +208,43 @@ describe Delayed::Worker do
           end
         end
       end
+   
+      describe "invalid jobs" do
+        
+        describe "when a deserialization error occurs" do
+          
+          before(:each) do
+            Delayed::Worker.destroy_failed_jobs = false
+            Delayed::Worker.max_attempts = 1
+          end
+          
+          it "should fail and never be run again if error due to unknown job class" do
+            @job = Delayed::Worker.backend.new :handler => "--- !ruby/object:JobThatDoesNotExist {}"
+            @job.save!
+            @worker.work_off
+            @job.reload
+            @job.attempts.should == 1
+            @job.failed_at.should_not be_nil
+            @job.last_error.should =~ /Job failed to load/
+          end
+          
+          it "should fail and never be run again if error due to invalid YAML stored in handler" do
+            # valid yaml would be : "--- !ruby/struct:YAMLErrorJob \nprop: \n- 1\n- 2\n"
+            @invalid_yaml_handler = "--- !ruby/struct:YAMLErrorJob \nprop: \n  - 1\n - 2\n"
+            @job = Delayed::Worker.backend.new :handler => @invalid_yaml_handler
+            @job.save!
+            @worker.work_off
+            @job.reload
+            @job.attempts.should == 1
+            @job.failed_at.should_not be_nil
+            @job.last_error.should =~ /Job failed to load/
+            @job.last_error.should =~ /syntax error/
+          end
+          
+        end
+        
+      end
+      
     end
   end
   

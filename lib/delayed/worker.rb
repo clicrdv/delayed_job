@@ -184,8 +184,9 @@ module Delayed
             say "* [Worker(#{name})] failed to acquire exclusive lock for #{job.name}", Logger::WARN
             false
           end
+        # Catch deserialization errors and mark job as failed (job would permanently failed, whatever times we retry)
         rescue Delayed::Backend::DeserializationError => e
-          job.update_attributes(:attempts => 3, :failed_at => DateTime.now, :last_error => e.message)
+          job.update_attributes(:attempts => self.class.max_attempts, :failed_at => Delayed::Job.db_time_now, :last_error => e.message)
           false
         end
       end
